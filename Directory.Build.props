@@ -1,0 +1,49 @@
+<Project >
+
+  <!-- Solution wide msBuild settings -->
+  <!-- Can be overridden if desired by a property of the same name in a project file for an assembly -->
+
+  <PropertyGroup>
+    <!-- All projects use Properties/AssemblyInfo.cs as their AssemblyInfo location -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	<!-- Use the latest version of the C# language -->
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <!-- Release Configuration compilation symbols, flags and build options -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DefineConstants>RELEASE;</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Debug Configuration compilation symbols, flags and build options -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <NoWarn>1701;1702;1705,NU1701</NoWarn>
+  </PropertyGroup>
+
+  <!-- .NET Standard 2.0 references, compilation flags and build options -->
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0'">
+    <DefineConstants>NETCORE;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
+  </PropertyGroup>
+
+  <!-- .NET Core 2.0 references, compilation flags and build options -->
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0'">
+    <DefineConstants>NETCORE;</DefineConstants>
+  </PropertyGroup>
+  
+    <!-- .NET Core 3.0 references, compilation flags and build options -->
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.0'">
+    <DefineConstants>NETCORE;</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Bonus Easter egg: Demonstrate the difference between msbuild run from inside Visual Studio, and msbuild called from dotnet CLI
+       Replace Never with Clean -->
+  <Target Name="HighlightDifferencesBetweenMSBuild" BeforeTargets="Never">
+    <Message  Text="MSBuildRuntimeType = $(MSBuildRuntimeType)" />
+    <Message Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'" Text="SolutionDir undefined or null"/>
+    <Message Condition="$(SolutionDir) != '' And $(SolutionDir) != '*Undefined*'" Text="SolutionDir =$(SolutionDir)"/>
+  </Target>
+
+</Project>

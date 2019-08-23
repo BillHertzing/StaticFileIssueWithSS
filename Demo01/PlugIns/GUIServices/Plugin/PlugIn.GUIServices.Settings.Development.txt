@@ -1,0 +1,5 @@
+# Application Configuration Settings for Ace Agent Plugin GUIServices
+# versioninfo TBD
+
+GUIs {GUIs:[{VirtualRootPath:01,RelativeToContentRootPath:..\..\..\..\..\Demo01\GUI\GUI01\bin\Debug\netstandard2.0\Publish\GUI\dist},{VirtualRootPath:02,RelativeToContentRootPath:..\..\..\..\..\Demo01\GUI\GUI02\bin\Debug\netstandard2.0\Publish\GUI\dist}]}
+
