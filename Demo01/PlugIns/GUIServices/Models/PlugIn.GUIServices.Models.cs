@@ -18,17 +18,17 @@ namespace Ace.Agent.GUIServices
     }
 	
 	// This route will list all of the GUIS and their versions that are loaded via a plugin
-    //[Route("/gui/ListGUI")]
+    [Route("/ListGUIs")]
     //[Route("/gui/ListGUI/{Kind};{Version}")]
-    //public class ListGUIRequest : IReturn<ListGUIsResponse>
-    //{
-    //    public string Kind { get; set; }
-    //    public string Version { get; set; }
-    //}
-    //public class ListGUIsResponse
-    //{
-    //    public string Kind { get; set; }
-    //    public string Version { get; set; }
-    //    public string App_Base { get; set; }
-    //}
+    public class ListGUIsRequest : IReturn<ListGUIsResponse>
+    {
+        public string Kind { get; set; }
+        public string Version { get; set; }
+    }
+    public class ListGUIsResponse
+    {
+        public string Kind { get; set; }
+        public string Version { get; set; }
+        public string App_Base { get; set; }
+    }
 }

@@ -10,18 +10,22 @@ using ServiceStack.VirtualPath;
 using System.Collections.Generic;
 using Ace.Agent.GUIServices;
 
-namespace Server {
+namespace Server
+{
 
-    public class SSAppHost : AppHostBase {
-        
+    public class SSAppHost : AppHostBase
+    {
+
         public const string CouldNotCreateServiceStackVirtualFileMappingExceptionMessage = "Could not create ServiceStack Virtual File Mapping: ";
 
-        public SSAppHost() : base("SSServer", typeof(SSAppHost).Assembly) {
+        public SSAppHost() : base("SSServer", typeof(SSAppHost).Assembly)
+        {
             Log.Debug("Entering SSAppHost Ctor");
             Log.Debug("Leaving SSAppHost Ctor");
         }
 
-        public override void Configure(Container container) {
+        public override void Configure(Container container)
+        {
             Log.Debug("Entering SSAppHost.Configure method");
 
             // Everythoing having to do with the delivery of static files should be handled within the GUIServices PlugIn
@@ -37,12 +41,15 @@ namespace Server {
                 Plugins.Add(pl);
             }
 
+            this.AddVirtualFileSources.Add(new FileSystemMapping("01", "C:\\Dropbox\\whertzing\\GitHub\\StaticFileIssueWithSS\\Demo01\\Server\\bin\\Debug\\netcoreapp3.0\\..\\..\\..\\..\\..\\Demo01\\GUI\\GUI01\\bin\\Debug\\netstandard2.0\\Publish\\GUI\\dist"));
+            this.AddVirtualFileSources.Add(new FileSystemMapping("02", "C:\\Dropbox\\whertzing\\GitHub\\StaticFileIssueWithSS\\Demo01\\Server\\bin\\Debug\\netcoreapp3.0\\..\\..\\..\\..\\..\\Demo01\\GUI\\GUI02\\bin\\Debug\\netstandard2.0\\Publish\\GUI\\dist"));
 
             // Remove the ServieStack metadata feature, as it overrides the default behaviour expected when a request for a root resource arrives, and the root resource iis not found
             //this.Config.EnableFeatures=Feature.All.Remove(Feature.Metadata);
-            
+
             Log.Debug("Leaving SSAppHost.Configure");
         }
     }
+
 
 }

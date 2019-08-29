@@ -54,7 +54,7 @@
 
   <!-- Packages to implement persistent State through the Blazored.LocalStorage NuGet package-->  
   <ItemGroup>
-    <PackageReference Include="Blazored.LocalStorage" Version="2.0.11" />
+    <PackageReference Include="Blazored.LocalStorage" Version="2.0.12" />
   </ItemGroup>
 
   <!-- Packages to implement MEL Logging through the Blazor.Extensions.Logging NuGet package-->  

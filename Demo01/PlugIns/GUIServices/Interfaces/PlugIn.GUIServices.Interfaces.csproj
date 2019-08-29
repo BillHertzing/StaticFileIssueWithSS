@@ -37,8 +37,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Data\PlugIn.GUIServices.Data.csproj" />
     <ProjectReference Include="..\Models\PlugIn.GUIServices.Models.csproj" />
     <ProjectReference Include="..\Shared\PlugIn.GUIServices.Shared.csproj" />
+    <ProjectReference Include="..\StringConstants\PlugIn.GUIServices.StringConstants.csproj" />
   </ItemGroup>
   
 </Project>
