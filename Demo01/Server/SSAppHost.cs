@@ -41,12 +41,6 @@ namespace Server
                 Plugins.Add(pl);
             }
 
-            this.AddVirtualFileSources.Add(new FileSystemMapping("01", "C:\\Dropbox\\whertzing\\GitHub\\StaticFileIssueWithSS\\Demo01\\Server\\bin\\Debug\\netcoreapp3.0\\..\\..\\..\\..\\..\\Demo01\\GUI\\GUI01\\bin\\Debug\\netstandard2.0\\Publish\\GUI\\dist"));
-            this.AddVirtualFileSources.Add(new FileSystemMapping("02", "C:\\Dropbox\\whertzing\\GitHub\\StaticFileIssueWithSS\\Demo01\\Server\\bin\\Debug\\netcoreapp3.0\\..\\..\\..\\..\\..\\Demo01\\GUI\\GUI02\\bin\\Debug\\netstandard2.0\\Publish\\GUI\\dist"));
-
-            // Remove the ServieStack metadata feature, as it overrides the default behaviour expected when a request for a root resource arrives, and the root resource iis not found
-            //this.Config.EnableFeatures=Feature.All.Remove(Feature.Metadata);
-
             Log.Debug("Leaving SSAppHost.Configure");
         }
     }

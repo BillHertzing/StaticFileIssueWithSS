@@ -19,21 +19,33 @@ namespace Ace.Agent.GUIServices
 
         public Microsoft.Extensions.Hosting.IHostEnvironment HostEnvironment { get; set; }
 
-        public void Configure(IAppHost appHost)
-        {
-            Log.Debug("<GUIServicesPlugin.Configure, appHost = {AppHost}", appHost);
+        public IAppSettings PlugInAppSettings { get; set; }
+        public ConfigurationData ConfigurationData { get; set; }
 
-            // Load the local property of IHostEnvironment type
+        /// <summary>
+        /// Register this plugin with the appHost
+        /// </summary>
+        /// <param name="appHost">The ServiceStack Host</param>
+        public void Register(IAppHost appHost)
+        {
+            if (null == appHost) { throw new ArgumentNullException(nameof(appHost)); }
+
+            appHost.RegisterService<GUIServices>();
+        }
+
+        /// Configure its PlugInAppSettings and ConfigurationData
+        public void BeforePluginsLoaded(IAppHost appHost)
+        {
+
+            // Get the IHostEnvironment type object from the ServiceStack Container
             HostEnvironment = appHost.GetContainer().Resolve<Microsoft.Extensions.Hosting.IHostEnvironment>();
             // Determine the environment this PlugIn has been activated in
             string envName = HostEnvironment.EnvironmentName;
 
             // Populate this PlugIn's AppSettings Configuration Settings and place it in the appSettingsDictionary
-
-            // Location of the Configuration text files are at the ContentRoot. ToDo: figure out how to place them / resolve them relative to the location of the PlugIn assembly
-
+            // ToDo: figure out how to place /resolve text files from relative to the location of the PlugIn assembly
             var pluginAppSettingsBuilder = new MultiAppSettingsBuilder();
-            // ToDo: command line settings
+            // ToDo: command line settings have the highest priority 
             // Environment variables have 2nd highest priority
             pluginAppSettingsBuilder.AddEnvironmentalVariables();
             // third priority are Non-Production Configuration settings in a text file
@@ -50,23 +62,94 @@ namespace Ace.Agent.GUIServices
             pluginAppSettingsBuilder.AddDictionarySettings(DefaultConfiguration.Production);
 
             // Create the appSettings for this PlugIn from the builder
-            var pluginAppSettings = pluginAppSettingsBuilder.Build();
+            PlugInAppSettings = pluginAppSettingsBuilder.Build();
+            // Populate the ConfigurationData property with an empty configuration data instance
+            // populate the GUIS property of the ConfigurationData with a new GUIS having an empty list of GUIs
+            ConfigurationData = new ConfigurationData();
+            ConfigurationData.GUIS = new GUIS() { GUIs = new List<GUI>() };
+            // Get the GUIMaps POCO from PlugInAppSettings
+            // Ensure the PlugInAppSettings has a non-empty ConfigKey for the GUIMaps
+            if (!PlugInAppSettings.Exists(StringConstants.GUIMapsConfigKey)
+                || (PlugInAppSettings.GetString(StringConstants.GUIMapsConfigKey) == string.Empty))
+            {
+                throw new Exception(StringConstants.GUISKeyOrValueNotFoundExceptionMessage);
+            }
+            // ToDo: Security: this is a place where character strings from external sources are processed, check carefully
+            //  any typo in the text file can make the conversion to a POCO break
+            GUIMaps gUIMaps;
+            try
+            {
+                gUIMaps = PlugInAppSettings.Get<GUIMaps>(StringConstants.GUIMapsConfigKey);
+            }
+            catch (Exception)
+            {
+                //ToDo: Better exception handling
+                throw;
+            }
+            // ToDo: Throw exception if the IEnumerable count = 0
+            char[] invalidChars = Path.GetInvalidPathChars();
 
+            // Loop over each GUI defined in pluginAppSettings GUIs, create a virtualFileMapping
+            foreach (GUIMap gUIMap in gUIMaps._GUIMaps)
+            {
+                if (gUIMap.RelativeToContentRootPath.Any(x => invalidChars.Contains(x)))
+                {
+                    throw new Exception(StringConstants.RelativeRootPathValueContainsIlegalCharacterExceptionMessage);
+                }
+                // The GenericHost's ContentRootPath is found on the HostEnvironment injected during the .ctor
+                var physicalPath = Path.Combine(this.HostEnvironment.ContentRootPath, gUIMap.RelativeToContentRootPath);
+                //Log.Debug("in GUIServicesPlugin.Configure, physicalPath = {PhysicalPath}, ContentRootPath = {ContentRootPath} relativeRootPathValue = {RelativeToContentRootPath}", physicalPath, this.HostEnvironment.ContentRootPath, gUIMap.RelativeToContentRootPath);
+                //Log.Debug("in GUIServicesPlugin.Configure, index.html exists in physicalpath = {0}", File.Exists(Path.Combine(physicalPath, "index.html")));
+                //Log.Debug("in GUIServicesPlugin.Configure, virtualRootPath = {GUIMapVirtualRootPath}", gUIMap.VirtualRootPath);
+                // Map the virtualRootPath to the physicalpath of the root of the GUI
+                // Wrap in a try catch block in case the physicalRootPath does not exists
+                // ToDo: test for failure condition instead of letting it throw an exception
+                try
+                {
+                    appHost.AddVirtualFileSources
+                        .Add(new FileSystemMapping(gUIMap.VirtualRootPath, physicalPath));
+                }
+                catch (Exception e)
+                {
+                    // ToDo: research how best to log an exception with Serilog, ServiceStack and/or MS
+                    // ToDo: USe stringconstant for exception message
+                    Log.Debug(e, "in GUIServicesPlugin.Configure, Adding a new VirtualFileSource failed with : {Message}", e.Message);
+                    // ToDo wrap in an Aggregate when doing loop
+                    throw;
+                    // ToDo: figure out how to log this and fallback to something useful
+                }
+                // ToDo: Get Version and Description from assembly metadata
+                ConfigurationData.GUIS.GUIs.Add(new GUI() { Version = "0.0.1" , Description = "A sample" , GUIMap = gUIMap });
+            }
+
+            // ToDo: add support for probing for additional GUIS at runtime, add them to ConfigurationData.GUIS.GUIs
+
+            // Map the root path "/" to the default GUI
+            // ToDo: Security: this is a place where character strings from external sources are processed, check carefully
+            // Get the DefaultGUIVirtualRootPath from PlugInAppSettings
+            // Ensure the PlugInAppSettings has a non-empty ConfigKey for the DefaultGUIVirtualRootPath
+            if (!PlugInAppSettings.Exists(StringConstants.DefaultGUIVirtualRootPathConfigKey)
+                || (PlugInAppSettings.GetString(StringConstants.DefaultGUIVirtualRootPathConfigKey) == string.Empty))
+            {
+                throw new Exception(StringConstants.DefaultGUIVirtualRootPathKeyOrValueNotFoundExceptionMessage);
+            }
+            // Ensure the value of the defaultGUIVirtualRootPath matches the value of the VirtualRootPath of one of the GUIMaps
+            string defaultGUIVirtualRootPath =  PlugInAppSettings.Get<string>(StringConstants.DefaultGUIVirtualRootPathConfigKey);
+            GUI defaultGUI;
+            try { 
+                defaultGUI = ConfigurationData.GUIS.GUIs.Single(gUI => gUI.GUIMap.VirtualRootPath.Matches(defaultGUIVirtualRootPath));
+            } catch {
+                throw new Exception(StringConstants.DefaultGUIVirtualRootPathDoesNotMatchExactlyOneGUIVirtualRootPathExceptionMessage);
+            }
+
+            // Set the default redirect 
+            appHost.Config.DefaultRedirectPath = String.Format(StringConstants.DefaultRedirectPathTemplate,defaultGUI.GUIMap.VirtualRootPath);
 
             // Blazor requires the delivery of static files ending in certain file suffixes.
-            // SS disallows many of these by default, so here we tell SS to allow certain file suffixes
+            // SS disallows some of these by default, so here we tell SS to allow certain file suffixes
             appHost.Config.AllowFileExtensions.Add("dll");
             appHost.Config.AllowFileExtensions.Add("json");
             appHost.Config.AllowFileExtensions.Add("pdb");
-
-            // per conversation with Myth at SS, the default behavior of a web server, for URI "/" is to return the content of wwwroot/index.html
-            // ToDo: better understanding how this is configured to ensure it behaves as expected in all WebMost models
-            // appHost.Config.DefaultRedirectPath="/index.html";
-
-            // Remove the ServiceStack metadata feature, as it overrides the default behavior expected when a request for a root resource arrives, and the root resource is not found
-            appHost.Config.EnableFeatures = Feature.All.Remove(Feature.Metadata);
-
-            // Need to figure out if / how a PlugIn can add a PlugIn to the parent AppHost, if it detects there is a dependency
 
             // Blazor requires CORS support, enable the ServiceStack CORS feature
             appHost.Plugins.Add(new CorsFeature(
@@ -75,85 +158,19 @@ namespace Ace.Agent.GUIServices
                allowCredentials: true,
                allowedHeaders: "content-type, Authorization, Accept"));
 
-            // create the plugIn's data object
-            GUIServicesData gUIServicesData = new GUIServicesData(pluginAppSettings);
+            // create the PlugIn's data object  
+            GUIServicesData gUIServicesData = new GUIServicesData(PlugInAppSettings, ConfigurationData);
 
             // Pass the Plugin's data structure to the container so it will be available to every other module and services
             appHost.GetContainer().Register<GUIServicesData>(d => gUIServicesData);
 
             // ToDo: enable the mechanisms that monitors each plugin-specific data sensor, and start them running
-
-        }
-
-        /// <summary>
-        /// Register this plugin with the appHost
-        /// Configure its observableDataStructures and event handlers
-        /// </summary>
-        /// <param name="appHost">The ASP.Net Host</param>
-        public void Register(IAppHost appHost)
-        {
-            // ToDo: Create static string for exception message
-            if (null == appHost) { throw new ArgumentNullException("appHost"); }
-            appHost.RegisterService<GUIServices>();
-            this.Configure(appHost);
-        }
-
-        public void BeforePluginsLoaded(IAppHost appHost)
-        {
+            // ToDo: Need to figure out if / how a PlugIn can add a PlugIn to the parent AppHost, if it detects there is a dependency
         }
 
         public void AfterPluginsLoaded(IAppHost appHost)
         {
-            /*
-            // Get the Plugin's data structure from the SS container
-            GUIServicesData gUIServicesData =  appHost.GetContainer().Resolve<GUIServicesData>();
-            // Get this PlugIn's AppSettings
-            IAppSettings pluginAppSettings = gUIServicesData.PluginAppSettings;
-            // Get the GUIs POCO from pluginAppSettings
-            if (!pluginAppSettings.Exists(StringConstants.GUISConfigKey)
-                || (pluginAppSettings.GetString(StringConstants.GUISConfigKey) == string.Empty))
-            {
-                throw new Exception(StringConstants.GUISKeyOrValueNotFoundExceptionMessage);
-            }
-            GUIS gUIS = pluginAppSettings.Get<GUIS>(StringConstants.GUISConfigKey);
-            // ToDo: Security: this is a place where character strings from external sources are processed, check carefully
-            char[] invalidChars = Path.GetInvalidPathChars();
 
-            // Loop over each GUI defined in pluginAppSettings GUIs, create a virtualFileMapping
-            // ToDo: Throw exception if the IEnumerable count = 0
-            foreach (GUIMapping gUIMapping in gUIS.GUIs )
-            {
-                if (gUIMapping.RelativeToContentRootPath.Any(x => invalidChars.Contains(x)))
-                {
-                    throw new Exception(StringConstants.RelativeRootPathValueContainsIlegalCharacterExceptionMessage);
-                }
-                // The GenericHost's ContentRootPath is found on the HostEnvironment injected during the .ctor
-                var physicalPath = Path.Combine(this.HostEnvironment.ContentRootPath, gUIMapping.RelativeToContentRootPath);
-                Log.Debug("in GUIServicesPlugin.Configure, physicalPath = {PhysicalPath}, ContentRootPath = {ContentRootPath} relativeRootPathValue = {RelativeToContentRootPath}",physicalPath, this.HostEnvironment.ContentRootPath, gUIMapping.RelativeToContentRootPath);
-                Log.Debug("in GUIServicesPlugin.Configure, index.html exists in physicalpath = {0}",File.Exists(Path.Combine(physicalPath, "index.html")));
-                Log.Debug("in GUIServicesPlugin.Configure, virtualRootPath = {GUIMappingVirtualRootPath}", gUIMapping.VirtualRootPath);
-                // Map the virtualRootPath to the physicalpath of the root of the GUI
-                // Wrap in a try catch block in case the physicalRootPath does not exists
-                // ToDo: test for failure condition instead of letting it throw an exception
-                try
-                {
-                    appHost.AddVirtualFileSources
-                        .Add(new FileSystemMapping(gUIMapping.VirtualRootPath, physicalPath));
-                }
-                catch (Exception e)
-                {
-                    // ToDo: research how best to log an exception with Serilog, ServiceStack and/or MS
-                    Log.Debug(e, "in GUIServicesPlugin.Configure, Adding a new VirtualFileSource failed with : {Message}", e.Message);
-                    // ToDo wrap in an Aggregate when doing loop
-                    throw;
-                    // ToDo: figure out how to log this and fallback to something useful
-                }
-                //ToDo: If this is the default GUI, map the URL '/' to this physical path
-            }
-            */
-            appHost.AddVirtualFileSources.Add(new FileSystemMapping("01", "C:\\Dropbox\\whertzing\\GitHub\\StaticFileIssueWithSS\\Demo01\\Server\\bin\\Debug\\netcoreapp3.0\\..\\..\\..\\..\\..\\Demo01\\GUI\\GUI01\\bin\\Debug\\netstandard2.0\\Publish\\GUI\\dist"));
-            appHost.AddVirtualFileSources.Add(new FileSystemMapping("02", "C:\\Dropbox\\whertzing\\GitHub\\StaticFileIssueWithSS\\Demo01\\Server\\bin\\Debug\\netcoreapp3.0\\..\\..\\..\\..\\..\\Demo01\\GUI\\GUI02\\bin\\Debug\\netstandard2.0\\Publish\\GUI\\dist"));
-            ;
         }
     }
 }

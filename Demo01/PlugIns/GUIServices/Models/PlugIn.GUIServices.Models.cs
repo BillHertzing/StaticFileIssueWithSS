@@ -1,34 +1,15 @@
+using Agent.GUIServices.Shared;
 using ServiceStack;
 
 
 namespace Ace.Agent.GUIServices
 {
-
-  // This route will ensure that serviceStack has the GUI PlugIn loaded
-  [Route("/VerifyGUI")]
-  [Route("/VerifyGUI/{Kind};{Version}")]
-  public class VerifyGUIRequest : IReturn<VerifyGUIResponse>
+    // This route will ensure that the GUI PlugIn is loaded
+	// This route will return this PlugIn's ConfigurationData
+    [Route("/GetGUIServicesConfigurationData")]
+    public class GetGUIServicesConfigurationDataReqDTO : IReturn<GetGUIServicesConfigurationDataRspDTO>{}
+    public class GetGUIServicesConfigurationDataRspDTO
     {
-        public string Kind { get; set; }
-        public string Version { get; set; }
-    }
-    public class VerifyGUIResponse
-    {
-        public string Result { get; set; }
-    }
-	
-	// This route will list all of the GUIS and their versions that are loaded via a plugin
-    [Route("/ListGUIs")]
-    //[Route("/gui/ListGUI/{Kind};{Version}")]
-    public class ListGUIsRequest : IReturn<ListGUIsResponse>
-    {
-        public string Kind { get; set; }
-        public string Version { get; set; }
-    }
-    public class ListGUIsResponse
-    {
-        public string Kind { get; set; }
-        public string Version { get; set; }
-        public string App_Base { get; set; }
+        public ConfigurationData ConfigurationData { get; set; }
     }
 }

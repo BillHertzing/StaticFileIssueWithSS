@@ -5,27 +5,22 @@ using ServiceStack;
 using ServiceStack.Configuration;
 using ServiceStack.VirtualPath;
 using Serilog;
+using Agent.GUIServices.Shared;
 
 namespace Ace.Agent.GUIServices
 {
     public class GUIServicesData
     {
-
-        public GUIServicesData() : this(new MultiAppSettingsBuilder().Build())
-        {
-            Log.Debug("<GUIServicesData parameterless .ctor");
-            Log.Debug("GUIServicesData parameterless .ctor>");
-        }
-
-        public GUIServicesData(IAppSettings pluginAppSettings)
+        public GUIServicesData(IAppSettings pluginAppSettings, ConfigurationData configurationData)
         {
             Log.Debug("<GUIServicesData .ctor, pluginAppSettings = {PluginAppSettings}", pluginAppSettings);
-            PluginAppSettings = pluginAppSettings;
+            PlugInAppSettings = pluginAppSettings;
+            ConfigurationData = configurationData;
             Log.Debug("GUIServicesData .ctor>");
         }
 
-        //ToDo: constructors with event handlers
+        public IAppSettings PlugInAppSettings { get; set; }
+        public ConfigurationData ConfigurationData { get; set; }
 
-        public IAppSettings PluginAppSettings { get; set; }
     }
 }
