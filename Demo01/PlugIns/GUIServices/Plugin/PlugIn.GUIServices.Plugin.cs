@@ -29,7 +29,6 @@ namespace Ace.Agent.GUIServices
         public void Register(IAppHost appHost)
         {
             if (null == appHost) { throw new ArgumentNullException(nameof(appHost)); }
-
             appHost.RegisterService<GUIServices>();
         }
 
@@ -61,7 +60,7 @@ namespace Ace.Agent.GUIServices
             // BuiltIn (compiled in) have the lowest priority
             pluginAppSettingsBuilder.AddDictionarySettings(DefaultConfiguration.Production);
 
-            // Create the appSettings for this PlugIn from the builder
+            // Populate the PlugInAppSettings property for this PlugIn from the builder
             PlugInAppSettings = pluginAppSettingsBuilder.Build();
             // Populate the ConfigurationData property with an empty configuration data instance
             // populate the GUIS property of the ConfigurationData with a new GUIS having an empty list of GUIs
