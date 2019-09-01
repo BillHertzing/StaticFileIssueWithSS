@@ -20,6 +20,7 @@ namespace Ace.Agent.GUIServices
         public Microsoft.Extensions.Hosting.IHostEnvironment HostEnvironment { get; set; }
 
         public IAppSettings PlugInAppSettings { get; set; }
+
         public ConfigurationData ConfigurationData { get; set; }
 
         /// <summary>
@@ -100,22 +101,35 @@ namespace Ace.Agent.GUIServices
                 //Log.Debug("in GUIServicesPlugin.Configure, physicalPath = {PhysicalPath}, ContentRootPath = {ContentRootPath} relativeRootPathValue = {RelativeToContentRootPath}", physicalPath, this.HostEnvironment.ContentRootPath, gUIMap.RelativeToContentRootPath);
                 //Log.Debug("in GUIServicesPlugin.Configure, index.html exists in physicalpath = {0}", File.Exists(Path.Combine(physicalPath, "index.html")));
                 //Log.Debug("in GUIServicesPlugin.Configure, virtualRootPath = {GUIMapVirtualRootPath}", gUIMap.VirtualRootPath);
-                // Map the virtualRootPath to the physicalpath of the root of the GUI
-                // Wrap in a try catch block in case the physicalRootPath does not exists
-                // ToDo: test for failure condition instead of letting it throw an exception
-                try
-                {
+
+                // if the VirtualRootPath is empty, setup the webserver's wwwroot to point to the physicalpath
+                if (gUIMap.VirtualRootPath == null)  {
+                    Log.Debug("current wwwroot = {Wwwroot}", (appHost as AppHostBase).HostingEnvironment.WebRootPath);
+                    // If the webserver's wwwroot is already populated, throw an exception
+                    // Set the WebRootPath to the physicalpath
+                    // (appHost as AppHostBase).HostingEnvironment.WebRootPath = physicalPath;
+                    // Log.Debug("current wwwroot = {Wwwroot}", (appHost as AppHostBase).HostingEnvironment.WebRootPath);
                     appHost.AddVirtualFileSources
-                        .Add(new FileSystemMapping(gUIMap.VirtualRootPath, physicalPath));
+                           .Add(new FileSystemMapping("", physicalPath));
                 }
-                catch (Exception e)
-                {
-                    // ToDo: research how best to log an exception with Serilog, ServiceStack and/or MS
-                    // ToDo: USe stringconstant for exception message
-                    Log.Debug(e, "in GUIServicesPlugin.Configure, Adding a new VirtualFileSource failed with : {Message}", e.Message);
-                    // ToDo wrap in an Aggregate when doing loop
-                    throw;
-                    // ToDo: figure out how to log this and fallback to something useful
+                else {
+                    // Map the virtualRootPath to the physicalpath of the root of the GUI
+                    // Wrap in a try catch block in case the physicalRootPath does not exists
+                    // ToDo: test for failure condition instead of letting it throw an exception
+                    try
+                    {
+                        appHost.AddVirtualFileSources
+                            .Add(new FileSystemMapping(gUIMap.VirtualRootPath, physicalPath));
+                    }
+                    catch (Exception e)
+                    {
+                        // ToDo: research how best to log an exception with Serilog, ServiceStack and/or MS
+                        // ToDo: USe stringconstant for exception message
+                        Log.Debug(e, "in GUIServicesPlugin.Configure, Adding a new VirtualFileSource failed with : {Message}", e.Message);
+                        // ToDo wrap in an Aggregate when doing loop
+                        throw;
+                        // ToDo: figure out how to log this and fallback to something useful
+                    }
                 }
                 // ToDo: Get Version and Description from assembly metadata
                 ConfigurationData.GUIS.GUIs.Add(new GUI() { Version = "0.0.1" , Description = "A sample" , GUIMap = gUIMap });
@@ -123,12 +137,11 @@ namespace Ace.Agent.GUIServices
 
             // ToDo: add support for probing for additional GUIS at runtime, add them to ConfigurationData.GUIS.GUIs
 
-            // Map the root path "/" to the default GUI
+            // If a request comes in for the root of the web site, redirect it to the default GUI's index.html file
             // ToDo: Security: this is a place where character strings from external sources are processed, check carefully
             // Get the DefaultGUIVirtualRootPath from PlugInAppSettings
-            // Ensure the PlugInAppSettings has a non-empty ConfigKey for the DefaultGUIVirtualRootPath
-            if (!PlugInAppSettings.Exists(StringConstants.DefaultGUIVirtualRootPathConfigKey)
-                || (PlugInAppSettings.GetString(StringConstants.DefaultGUIVirtualRootPathConfigKey) == string.Empty))
+            // Ensure the PlugInAppSettings has a  (possibly empty) ConfigKey for the DefaultGUIVirtualRootPath
+            if (!PlugInAppSettings.Exists(StringConstants.DefaultGUIVirtualRootPathConfigKey))
             {
                 throw new Exception(StringConstants.DefaultGUIVirtualRootPathKeyOrValueNotFoundExceptionMessage);
             }
@@ -136,13 +149,14 @@ namespace Ace.Agent.GUIServices
             string defaultGUIVirtualRootPath =  PlugInAppSettings.Get<string>(StringConstants.DefaultGUIVirtualRootPathConfigKey);
             GUI defaultGUI;
             try { 
-                defaultGUI = ConfigurationData.GUIS.GUIs.Single(gUI => gUI.GUIMap.VirtualRootPath.Matches(defaultGUIVirtualRootPath));
+                defaultGUI = ConfigurationData.GUIS.GUIs.Single(gUI => gUI.GUIMap.VirtualRootPath == defaultGUIVirtualRootPath);
             } catch {
                 throw new Exception(StringConstants.DefaultGUIVirtualRootPathDoesNotMatchExactlyOneGUIVirtualRootPathExceptionMessage);
             }
 
-            // Set the default redirect 
+            // Set the default redirect. If defaultGUIVirtualRootPath is null, ensure there is not a double // in the  path
             appHost.Config.DefaultRedirectPath = String.Format(StringConstants.DefaultRedirectPathTemplate,defaultGUI.GUIMap.VirtualRootPath);
+
 
             // Blazor requires the delivery of static files ending in certain file suffixes.
             // SS disallows some of these by default, so here we tell SS to allow certain file suffixes
