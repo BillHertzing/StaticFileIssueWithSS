@@ -34,7 +34,7 @@
 
 
   <ItemGroup>
-    <PackageReference Include="ServiceStack" Version="5.6.1" />
+    <PackageReference Include="ServiceStack" Version="5.9.2" />
     <ProjectReference Include="..\Models\PlugIn.GUIServices.Models.csproj" />
     <ProjectReference Include="..\Shared\PlugIn.GUIServices.Shared.csproj" />
   </ItemGroup>
